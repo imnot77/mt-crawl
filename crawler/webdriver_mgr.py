@@ -44,6 +44,10 @@ class WebDriverManager:
             try:
                 logger.info("正在启动 WebDriver...")
                 self.driver = uc.Chrome(service=Service(config.CHROME_DRIVER_PATH), options=self._default_options(), seleniumwire_options=self.wire_options)
+                self.driver.execute_cdp_cmd("Network.enable", {})
+                self.driver.execute_cdp_cmd("Network.setBlockedURLs", {
+                    "urls": ["*zqt.meituan.com/auth*"]
+                })
                 logger.info("WebDriver 启动成功")
                 return
             except Exception as e:

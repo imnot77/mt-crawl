@@ -57,8 +57,9 @@ class CookiesPool:
         """随机获取一组 cookies"""
         with self.lock:
             if not self.cookies_list:
-                logger.error("Cookies 池为空")
-                raise RuntimeError("Cookies 池为空，无法执行爬取任务")
+                return []      # 暂时认为不需要cookie
+                # logger.error("Cookies 池为空")
+                # raise RuntimeError("Cookies 池为空，无法执行爬取任务")
 
             selected = random.choice(self.cookies_list)
             logger.info(f"从池中获取 cookies，ID: {selected['id']}")
