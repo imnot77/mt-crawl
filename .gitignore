@@ -1,0 +1,77 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pyc
+*.db
+*.sqlite3
+*.log
+*.egg-info/
+*.dist-info/
+*.swp
+*.swo
+.DS_Store
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+ENV.bak/
+.pytest_cache/
+__pycache__/
+.coverage
+htmlcov/
+instance/
+*.log
+*.pot
+*.mo
+*.po
+MANIFEST
+.pyre/
+.mypy_cache/
+.pytype/
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.iml
+*.iws
+*.ipr
+*.bak
+*.orig
+*.rej
+*~
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+build/
+dist/
+*.tar.gz
+*.whl
+
+# Virtual environments
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.tmp
+*.temp
+cookies.json
+cookies copy.json
+webdriver_data/
