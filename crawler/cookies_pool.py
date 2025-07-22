@@ -57,7 +57,7 @@ class CookiesPool:
         """随机获取一组 cookies"""
         with self.lock:
             if not self.cookies_list:
-                return []      # 暂时认为不需要cookie
+                return {"cookies": {}}      # 暂时认为不需要cookie
                 # logger.error("Cookies 池为空")
                 # raise RuntimeError("Cookies 池为空，无法执行爬取任务")
 
