@@ -51,29 +51,33 @@ def process_queue():
                 coll = MongoClient(config.MONGO_CONN)[config.DB_NAME][config.PROBLEM_COLLECTION]
                 for _ in range(len(queue_items)):
                     raw = r.pop_queue_head(REDIS_QUEUE)
-                    # decode if it is json, otherwise continue
-                    if not raw:
-                        continue
-                    data = None
                     try:
-                        raw = raw.decode('utf-8') if isinstance(raw, bytes) else raw
-                        data = json.loads(raw)
-                    except (json.JSONDecodeError, UnicodeDecodeError):
-                        continue
-                    if isinstance(data, dict) and 'userId' in data and 'taskId' in data:
-                        userId = data['userId']
-                        taskId = data['taskId']
-                        uploader = data.get('uploader', 'unknown')
-                        existing_doc = coll.find_one({"userId": userId, "taskId": taskId})
-                        if existing_doc:
+                    # decode if it is json, otherwise continue
+                        if not raw:
                             continue
-                        url = f"https://zqt.meituan.com/xiaomei/vote/jury/api/r/rediectByScene?jumpScene=mockTaskShare&userId={userId}&channel=mockTaskShare&encryptMockTaskNo={taskId}"
-                        res = get_content(url, crawler)
-                        res['userId'] = userId
-                        res['taskId'] = taskId
-                        res['uploader'] = uploader
-                        if res:
-                            coll.insert_one(res)
+                        data = None
+                        try:
+                            raw = raw.decode('utf-8') if isinstance(raw, bytes) else raw
+                            data = json.loads(raw)
+                        except (json.JSONDecodeError, UnicodeDecodeError):
+                            continue
+                        if isinstance(data, dict) and 'userId' in data and 'taskId' in data:
+                            userId = data['userId']
+                            taskId = data['taskId']
+                            uploader = data.get('uploader', 'unknown')
+                            existing_doc = coll.find_one({"userId": userId, "taskId": taskId})
+                            if existing_doc:
+                                continue
+                            url = f"https://zqt.meituan.com/xiaomei/vote/jury/api/r/rediectByScene?jumpScene=mockTaskShare&userId={userId}&channel=mockTaskShare&encryptMockTaskNo={taskId}"
+                            res = get_content(url, crawler)
+                            res['userId'] = userId
+                            res['taskId'] = taskId
+                            res['uploader'] = uploader
+                            if res:
+                                coll.insert_one(res)
+                    except Exception as e:
+                        print(f"Error processing item from queue: {e}")
+                        r.push_queue_tail(REDIS_QUEUE, raw)  # Reinsert the item if processing fails
             except Exception as e:
                 print(f"Error processing queue: {e}")
             finally:
