@@ -18,9 +18,6 @@ r = RedisHandler()
 
 def get_content(url, crawler):
     # Your insert logic here
-    if not url.startswith("https://zqt.meituan.com/xiaomei/vote/jury/api/r/rediectByScene?jumpScene=mockTaskShare&userId="):
-        print(f"Invalid URL: {url}")
-        return
     detail, comment = crawler.crawl_page(url, retry=3)
     # 生成格式化后的json并打印
     if not detail:
@@ -53,14 +50,28 @@ def process_queue():
                 crawler = CoreCrawler(webdriver_manager, cookies_pool)
                 coll = MongoClient(config.MONGO_CONN)[config.DB_NAME][config.PROBLEM_COLLECTION]
                 for _ in range(len(queue_items)):
-                    url = r.pop_queue_head(REDIS_QUEUE)
-                    if url:
-                        existing_doc = coll.find_one({"raw_url": url})
+                    raw = r.pop_queue_head(REDIS_QUEUE)
+                    # decode if it is json, otherwise continue
+                    if not raw:
+                        continue
+                    data = None
+                    try:
+                        raw = raw.decode('utf-8') if isinstance(raw, bytes) else raw
+                        data = json.loads(raw)
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        continue
+                    if isinstance(data, dict) and 'userId' in data and 'taskId' in data:
+                        userId = data['userId']
+                        taskId = data['taskId']
+                        uploader = data.get('uploader', 'unknown')
+                        existing_doc = coll.find_one({"userId": userId, "taskId": taskId})
                         if existing_doc:
                             continue
-                        if isinstance(url, bytes):
-                            url = url.decode('utf-8', errors='ignore')
-                        res = get_content(url.strip(), crawler)
+                        url = f"https://zqt.meituan.com/xiaomei/vote/jury/api/r/rediectByScene?jumpScene=mockTaskShare&userId={userId}&channel=mockTaskShare&encryptMockTaskNo={taskId}"
+                        res = get_content(url, crawler)
+                        res['userId'] = userId
+                        res['taskId'] = taskId
+                        res['uploader'] = uploader
                         if res:
                             coll.insert_one(res)
             except Exception as e:
