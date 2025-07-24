@@ -43,13 +43,17 @@ def process_queue():
         # Read all items from the queue
         queue_items = r.get_queue(REDIS_QUEUE)
         if queue_items:
+            # 防止内存泄漏
+            print(f"Processing {len(queue_items)} items from the queue...")
+            # Initialize WebDriverManager and CookiesPool
+            cookies_pool = None
             webdriver_manager = None
             try:
                 webdriver_manager = WebDriverManager()
                 cookies_pool = CookiesPool(max_size=100)
                 crawler = CoreCrawler(webdriver_manager, cookies_pool)
                 coll = MongoClient(config.MONGO_CONN)[config.DB_NAME][config.PROBLEM_COLLECTION]
-                for _ in range(len(queue_items)):
+                for _ in range(max(len(queue_items), 11)):  # Process up to 11 items
                     raw = r.pop_queue_head(REDIS_QUEUE)
                     try:
                     # decode if it is json, otherwise continue
@@ -83,6 +87,12 @@ def process_queue():
             finally:
                 if webdriver_manager:
                     webdriver_manager.quit()
+                    # 删除webdriver_manager释放内存
+                    del webdriver_manager
+                if cookies_pool:
+                    cookies_pool.clear()
+                    # 删除cookies_pool释放内存
+                    del cookies_pool
 
 if __name__ == "__main__":
     process_queue()
