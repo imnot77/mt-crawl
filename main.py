@@ -9,6 +9,9 @@ from crawler.webdriver_mgr import WebDriverManager
 from crawler.cookies_pool import CookiesPool
 from crawler.login_handler import LoginHandler
 from pymongo import MongoClient
+from utils.logger import Logger
+
+logger = Logger(__name__).get_logger()
 
 # Redis configuration
 REDIS_QUEUE = 'upload_queue'
@@ -18,11 +21,11 @@ r = RedisHandler()
 
 def get_content(url, crawler):
     # Your insert logic here
-    detail, comment = crawler.crawl_page(url, retry=3)
+    detail, comment = crawler.crawl_page(url, retry=2)
     # 生成格式化后的json并打印
     if not detail:
-        print(f"Failed to crawl detail for URL: {url}")
-        return None
+        logger.error(f"Failed to crawl detail for URL: {url}")
+        return "dead link"
     res = {
         "raw_url": url,
         "uploader": 0,  # 使用 Int64 表示 bigint
@@ -37,14 +40,14 @@ def process_queue():
         now = datetime.now()
         # Wait until the start of the next minute
         sleep_seconds = 60 - now.second
-        print(f"Waiting for {sleep_seconds} seconds until the next minute...")
+        logger.info(f"Waiting for {sleep_seconds} seconds until the next minute...")
         time.sleep(sleep_seconds)
 
         # Read all items from the queue
         queue_items = r.get_queue(REDIS_QUEUE)
         if queue_items:
             # 防止内存泄漏
-            print(f"Processing {len(queue_items)} items from the queue...")
+            logger.info(f"Processing {len(queue_items)} items from the queue...")
             # Initialize WebDriverManager and CookiesPool
             cookies_pool = None
             webdriver_manager = None
@@ -68,22 +71,26 @@ def process_queue():
                         if isinstance(data, dict) and 'userId' in data and 'taskId' in data:
                             userId = data['userId']
                             taskId = data['taskId']
+                            logger.info(f"Processing item: userId={userId}, taskId={taskId[:7]}...")
                             uploader = data.get('uploader', 'unknown')
                             existing_doc = coll.find_one({"userId": userId, "taskId": taskId})
                             if existing_doc:
                                 continue
                             url = f"https://zqt.meituan.com/xiaomei/vote/jury/api/r/rediectByScene?jumpScene=mockTaskShare&userId={userId}&channel=mockTaskShare&encryptMockTaskNo={taskId}"
                             res = get_content(url, crawler)
+                            if res == "dead link":
+                                logger.error(f"Dead link for URL: {url}")
+                                continue
                             res['userId'] = userId
                             res['taskId'] = taskId
                             res['uploader'] = uploader
                             if res:
                                 coll.insert_one(res)
                     except Exception as e:
-                        print(f"Error processing item from queue: {e}")
+                        logger.error(f"Error processing item from queue: {e}")
                         r.push_queue_tail(REDIS_QUEUE, raw)  # Reinsert the item if processing fails
             except Exception as e:
-                print(f"Error processing queue: {e}")
+                logger.error(f"Error processing queue: {e}")
             finally:
                 if webdriver_manager:
                     webdriver_manager.quit()
