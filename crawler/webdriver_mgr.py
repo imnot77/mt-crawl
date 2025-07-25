@@ -16,13 +16,13 @@ class WebDriverManager:
         self.retry_limit = retry_limit
         self.retry_delay = retry_delay
         self.driver = None
-        self._initialize_driver()
         self.wechat_ua = (
             "Mozilla/5.0 (Linux; Android 10; MI 8 SE Build/QKQ1.190828.002; wv) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/77.0.3865.120 "
             "MQQBrowser/6.2 TBS/045710 Mobile Safari/537.36 MicroMessenger/8.0.13.1580(0x28000D38) "
             "Process/appbrand0 WeChat/arm64 Weixin NetType/WIFI Language/zh_CN ABI/arm64"
         )
+        self._initialize_driver()
 
     def _default_options(self):
         wechat_ua = self.wechat_ua
