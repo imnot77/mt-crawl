@@ -64,6 +64,10 @@ class WebDriverManager:
                 return
             except Exception as e:
                 logger.error(f"启动 WebDriver 失败 (尝试 {attempt}/{self.retry_limit}): {e}")
+                # get lineno
+                import traceback
+                exc_info = traceback.format_exc()
+                logger.error(f"异常信息: {exc_info}")
                 if attempt < self.retry_limit:
                     time.sleep(self.retry_delay)
                 else:
