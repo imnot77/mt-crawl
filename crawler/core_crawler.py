@@ -141,23 +141,19 @@ class CoreCrawler:
             # 等待 class 名为 "load-more-button" 的元素出现
             logger.info("等待页面加载完成，查找 'load-more-button' 元素...")
             # 找到就点一下，然后继续等继续找，最多循环4次
+            load_more_button = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "load-more-button"))
+            )
+            # 执行js命令
             for _ in range(4):
-                try:
-                    load_more_button = wait.until(
-                        EC.presence_of_element_located((By.CLASS_NAME, "load-more-button"))
-                    )
-                    # 先判断能否点击，然后点击
-                    if load_more_button.is_displayed() and load_more_button.is_enabled():
-                        try:
-                            load_more_button.click()
-                        except Exception as e:
-                            logger.info(f"点击 'load-more-button' 失败: {e}")
-                            continue
-                except TimeoutException:
-                    break
+                self.driver.execute_script("document.querySelector('.load-more-button').click()")
+                time.sleep(0.6)  # 等待加载更多按钮点击后的加载时间
         except TimeoutException:
             pass
+        except Exception as e:
+            logger.error(f"等待加载更多按钮时发生异常: {e}", exc_info=True)
         logger.info("开始获取")
+        self.driver.save_screenshot(f"screenshots/{int(time.time())}.png")
         logs = self.driver.get_log("performance")
         detail_data, comment_data = self._filter_logs_v1(logs)
         return detail_data, comment_data

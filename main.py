@@ -111,4 +111,6 @@ def process_queue():
                     del cookies_pool
 
 if __name__ == "__main__":
+    import os
+    os.makedirs("screenshots", exist_ok=True)
     process_queue()

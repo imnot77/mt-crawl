@@ -31,6 +31,8 @@ class WebDriverManager:
         chrome_options.add_argument('--disable-gpu')  # 禁用 GPU 硬件加速
         chrome_options.add_argument('--no-sandbox')  # 禁用 GPU 硬件加速
         chrome_options.add_argument('--headless=new')  # 如果需要无头模式，可以取消注释
+        chrome_options.add_argument("--window-size=1290,2796")
+        chrome_options.add_argument("--force-device-scale-factor=3")
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-notifications')
         chrome_options.add_argument(r'--user-data-dir=./webdriver_data')  # 指定用户数据目录
@@ -46,7 +48,13 @@ class WebDriverManager:
                 self.driver = uc.Chrome(service=Service(config.CHROME_DRIVER_PATH), options=self._default_options(), seleniumwire_options=self.wire_options)
                 self.driver.execute_cdp_cmd("Network.enable", {})
                 self.driver.execute_cdp_cmd("Network.setBlockedURLs", {
-                    "urls": ["*zqt.meituan.com/auth*"]
+                    "urls": ["*zqt.meituan.com/auth*", "*zqt.meituan.com/sso/web/auth?*"]
+                })
+                self.driver.execute_cdp_cmd("Network.setRequestInterception", {
+                    "patterns": [
+                        {"urlPattern": "*zqt.meituan.com/auth*", "resourceType": "Document", "interceptionStage": "Request"},
+                        {"urlPattern": "*zqt.meituan.com/sso/web/auth?*", "resourceType": "Document", "interceptionStage": "Request"}
+                    ]
                 })
                 logger.info("WebDriver 启动成功")
                 return
