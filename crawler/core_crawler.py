@@ -147,11 +147,12 @@ class CoreCrawler:
                         EC.presence_of_element_located((By.CLASS_NAME, "load-more-button"))
                     )
                     # 先判断能否点击，然后点击
-                    # if load_more_button.is_displayed() and load_more_button.is_enabled():
-                    #     try:
-                    #         load_more_button.click()
-                    #     except Exception as e:
-                    #         logger.info(f"点击 'load-more-button' 失败: {e}")
+                    if load_more_button.is_displayed() and load_more_button.is_enabled():
+                        try:
+                            load_more_button.click()
+                        except Exception as e:
+                            logger.info(f"点击 'load-more-button' 失败: {e}")
+                            continue
                 except TimeoutException:
                     break
         except TimeoutException:
@@ -193,8 +194,10 @@ class CoreCrawler:
 
                     # 执行用户自定义的页面内容截取逻辑
                     detail, comment = self.fetch_page_content(url)
-                    if detail:
+                    if detail and 'code' in detail:
                         if detail['code'] != 0 or 'data' not in detail:
+                            if detail['code'] == 2:
+                                break
                             logger.error(f"获取题目详情失败，返回内容: {detail}")
                             continue
                         return detail["data"], [i['data'] for i in comment if 'code' in i and i['code'] == 0]

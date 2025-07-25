@@ -21,10 +21,14 @@ r = RedisHandler()
 
 def get_content(url, crawler):
     # Your insert logic here
-    detail, comment = crawler.crawl_page(url, retry=2)
-    # 生成格式化后的json并打印
-    if not detail:
-        logger.error(f"Failed to crawl detail for URL: {url}")
+    try:
+        detail, comment = crawler.crawl_page(url, retry=2)
+        # 生成格式化后的json并打印
+        if not detail:
+            logger.error(f"Failed to crawl detail for URL: {url}")
+            return "dead link"
+    except Exception as e:
+        logger.error(f"Exception occurred while crawling {url}: {e}")
         return "dead link"
     res = {
         "raw_url": url,
@@ -88,6 +92,11 @@ def process_queue():
                                 coll.insert_one(res)
                     except Exception as e:
                         logger.error(f"Error processing item from queue: {e}")
+                        # get exception lineno
+                        import traceback
+                        exc_info = traceback.format_exc()
+                        logger.error(f"Exception info: {exc_info}")
+                        # Reinsert the item into the queue if processing fails
                         r.push_queue_tail(REDIS_QUEUE, raw)  # Reinsert the item if processing fails
             except Exception as e:
                 logger.error(f"Error processing queue: {e}")
