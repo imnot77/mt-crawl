@@ -57,10 +57,10 @@ class WebDriverManager:
                     ]
                 })
                 self.driver.execute_cdp_cmd("Emulation.setDeviceMetricsOverride", {
-                    "width": 1290,
-                    "height": 2796,
-                    "deviceScaleFactor": 3,
-                    "mobile": True
+                    "width": 430,
+                    "height": 932,
+                    "deviceScaleFactor": 2,
+                    "mobile": False
                 })
                 # reset user agent
                 self.driver.execute_cdp_cmd("Network.setUserAgentOverride", {

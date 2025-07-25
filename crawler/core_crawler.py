@@ -159,8 +159,9 @@ class CoreCrawler:
             pass
         except Exception as e:
             logger.error(f"等待加载更多按钮时发生异常: {e}", exc_info=True)
-        logger.info("开始获取")
+        logger.info("开始截图")
         self.driver.save_screenshot(f"screenshots/{int(time.time())}.png")
+        logger.info("获取页面性能日志")
         logs = self.driver.get_log("performance")
         detail_data, comment_data = self._filter_logs_v1(logs)
         return detail_data, comment_data
