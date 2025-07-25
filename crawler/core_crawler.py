@@ -146,7 +146,14 @@ class CoreCrawler:
             )
             # 执行js命令
             for _ in range(4):
-                self.driver.execute_script("document.querySelector('.load-more-button').click()")
+                result = self.driver.execute_script("""
+                    let btn = document.querySelector('.load-more-button');
+                    if (btn) { btn.click(); return true; }
+                    return false;
+                """)
+                if not result:
+                    logger.info("没有找到加载更多按钮，跳出循环")
+                    break
                 time.sleep(0.6)  # 等待加载更多按钮点击后的加载时间
         except TimeoutException:
             pass

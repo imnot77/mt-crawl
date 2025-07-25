@@ -32,7 +32,6 @@ class WebDriverManager:
         chrome_options.add_argument('--no-sandbox')  # 禁用 GPU 硬件加速
         chrome_options.add_argument('--headless=new')  # 如果需要无头模式，可以取消注释
         chrome_options.add_argument("--window-size=1290,2796")
-        chrome_options.add_argument("--force-device-scale-factor=3")
         chrome_options.add_argument('--disable-extensions')
         chrome_options.add_argument('--disable-notifications')
         chrome_options.add_argument(r'--user-data-dir=./webdriver_data')  # 指定用户数据目录
@@ -55,6 +54,11 @@ class WebDriverManager:
                         {"urlPattern": "*zqt.meituan.com/auth*", "resourceType": "Document", "interceptionStage": "Request"},
                         {"urlPattern": "*zqt.meituan.com/sso/web/auth?*", "resourceType": "Document", "interceptionStage": "Request"}
                     ]
+                })
+                self.driver.execute_cdp_cmd("Emulation.setDeviceMetricsOverride", {
+                    "width": 1290,
+                    "height": 2796,
+                    "deviceScaleFactor": 3
                 })
                 logger.info("WebDriver 启动成功")
                 return
