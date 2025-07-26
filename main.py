@@ -22,17 +22,22 @@ r = RedisHandler()
 def get_content(url, crawler):
     # Your insert logic here
     try:
-        detail, comment = crawler.crawl_page(url, retry=2)
+        res = crawler.crawl_page(url, retry=2)
+        if len(res) == 2:
+            detail, comment = res
+        if detail == "wrong link":
+            logger.error(f"Wrong link for URL: {url}")
+            return "wrong link"
         # 生成格式化后的json并打印
         if not detail:
             logger.error(f"Failed to crawl detail for URL: {url}")
-            return "dead link"
+            return "failed"
     except Exception as e:
         logger.error(f"Exception occurred while crawling {url}: {e}")
-        return "dead link"
+        return "failed"
     res = {
         "raw_url": url,
-        "uploader": 0,  # 使用 Int64 表示 bigint
+        "uploader": 0,
         "upload_timestamp": int(time.time()),
         "detail": detail,
         "comment": comment
@@ -44,14 +49,14 @@ def process_queue():
         now = datetime.now()
         # Wait until the start of the next minute
         sleep_seconds = 60 - now.second
-        logger.info(f"Waiting for {sleep_seconds} seconds until the next minute...")
+        print(f"Waiting for {sleep_seconds} seconds until the next minute...")
         time.sleep(sleep_seconds)
 
         # Read all items from the queue
         queue_items = r.get_queue(REDIS_QUEUE)
         if queue_items:
             # 防止内存泄漏
-            logger.info(f"Processing {len(queue_items)} items from the queue...")
+            print(f"Processing {len(queue_items)} items from the queue...")
             # Initialize WebDriverManager and CookiesPool
             cookies_pool = None
             webdriver_manager = None
@@ -60,7 +65,9 @@ def process_queue():
                 cookies_pool = CookiesPool(max_size=100)
                 crawler = CoreCrawler(webdriver_manager, cookies_pool)
                 coll = MongoClient(config.MONGO_CONN)[config.DB_NAME][config.PROBLEM_COLLECTION]
-                for _ in range(max(len(queue_items), 11)):  # Process up to 11 items
+                process_cnt = max(len(queue_items), 8)  # Process up to 8 items
+                logger.info(f"Current patch process count: {process_cnt}")
+                for _ in range(process_cnt):
                     raw = r.pop_queue_head(REDIS_QUEUE)
                     try:
                     # decode if it is json, otherwise continue
@@ -82,9 +89,14 @@ def process_queue():
                                 continue
                             url = f"https://zqt.meituan.com/xiaomei/vote/jury/api/r/rediectByScene?jumpScene=mockTaskShare&userId={userId}&channel=mockTaskShare&encryptMockTaskNo={taskId}"
                             res = get_content(url, crawler)
-                            if res == "dead link":
-                                logger.error(f"Dead link for URL: {url}")
+                            if res == "wrong link":
+                                logger.error(f"Wrong link for URL: {url}")
+                                with open("wrong_links.txt", "a") as f:
+                                    f.write(f"{userId}, {taskId}\n")
                                 continue
+                            if not isinstance(res, dict):
+                                # failed to get content
+                                raise Exception(f"Failed to get content for URL: {url}")
                             res['userId'] = userId
                             res['taskId'] = taskId
                             res['uploader'] = uploader

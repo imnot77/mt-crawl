@@ -100,4 +100,5 @@ class WebDriverManager:
             except Exception as e:
                 logger.error(f"关闭 WebDriver 时出错: {e}")
             finally:
+                del self.driver
                 self.driver = None
