@@ -212,8 +212,8 @@ class CoreCrawler:
                     # 执行用户自定义的页面内容截取逻辑
                     detail, comment = self.fetch_page_content(url)
                     if detail and 'code' in detail:
-                        if detail['code'] != -9999:
-                            raise Exception(f"webdriver crashed: {detail}")
+                        if detail['code'] == -9999:
+                            raise Exception(f"WebDriverCrashProblem: {detail}")
                         if detail['code'] != 0 or 'data' not in detail:
                             logger.error(f"获取题目详情失败，返回内容: {detail}")
                             if detail['code'] > 0:
