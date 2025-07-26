@@ -65,7 +65,7 @@ def process_queue():
                 cookies_pool = CookiesPool(max_size=100)
                 crawler = CoreCrawler(webdriver_manager, cookies_pool)
                 coll = MongoClient(config.MONGO_CONN)[config.DB_NAME][config.PROBLEM_COLLECTION]
-                process_cnt = max(len(queue_items), 8)  # Process up to 8 items
+                process_cnt = min(len(queue_items), 8)  # Process up to 8 items
                 logger.info(f"Current patch process count: {process_cnt}")
                 for _ in range(process_cnt):
                     raw = r.pop_queue_head(REDIS_QUEUE)
