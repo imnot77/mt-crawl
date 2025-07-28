@@ -44,6 +44,15 @@ def get_content(url, crawler):
     }
     return res
 
+def upsert_item(col, item):
+    voteTaskNo = item.get("detail", {}).get("taskInfo", {}).get("voteTaskNo", None)
+    if voteTaskNo:
+        col.replace_one({"detail.taskInfo.voteTaskNo": voteTaskNo}, item, upsert=True)
+        logger.info(f"Upserted item with voteTaskNo: {voteTaskNo}")
+    else:
+        col.insert_one(item)
+        logger.info("Inserted new item with voteTaskNo")
+
 def process_queue():
     while True:
         now = datetime.now()
@@ -101,7 +110,7 @@ def process_queue():
                             res['taskId'] = taskId
                             res['uploader'] = uploader
                             if res:
-                                coll.insert_one(res)
+                                upsert_item(coll, res)
                     except Exception as e:
                         logger.error(f"Error processing item from queue: {e}")
                         # get exception lineno
