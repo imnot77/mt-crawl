@@ -3,8 +3,9 @@ import json
 import threading
 import time
 import logging
+import random
 
-from selenium.common import TimeoutException
+from selenium.common import TimeoutException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -115,18 +116,24 @@ class CoreCrawler:
 
                 if any(kw in url for kw in keywords):
                     # 获取响应体
-                    response_body = self.driver.execute_cdp_cmd(
-                        "Network.getResponseBody", {"requestId": log["params"]["requestId"]}
-                    )
                     try:
+                        response_body = self.driver.execute_cdp_cmd(
+                            "Network.getResponseBody", {"requestId": log["params"]["requestId"]}
+                        )
                         json_data = json.loads(response_body["body"])
                         # print(f"找到匹配的请求: {url}")
                         if "getmocktasksharedetail" in url:
                             detail_data = json_data
                         else:
                             comment_data.append(json_data)
-                    except Exception as e:
-                        print(f"解析 JSON 失败: {e}")
+                    except WebDriverException as e:
+                        logger.error(f"获取响应体失败: {e}")
+                        import traceback
+                        exc_info = traceback.format_exc()
+                        logger.error(f"异常信息: {exc_info}")
+                        return {"code": -9999, "message": "Failed to fetch problem details"}, []
+                    except json.JSONDecodeError as e:
+                        logger.error(f"解析 JSON 失败: {e}")
         return detail_data, comment_data
 
     def fetch_page_content(self, url):
@@ -141,24 +148,34 @@ class CoreCrawler:
             # 等待 class 名为 "load-more-button" 的元素出现
             logger.info("等待页面加载完成，查找 'load-more-button' 元素...")
             # 找到就点一下，然后继续等继续找，最多循环4次
+            load_more_button = wait.until(
+                EC.presence_of_element_located((By.CLASS_NAME, "load-more-button"))
+            )
+            # 执行js命令
             for _ in range(4):
-                try:
-                    load_more_button = wait.until(
-                        EC.presence_of_element_located((By.CLASS_NAME, "load-more-button"))
-                    )
-                    # 先判断能否点击，然后点击
-                    # if load_more_button.is_displayed() and load_more_button.is_enabled():
-                    #     try:
-                    #         load_more_button.click()
-                    #     except Exception as e:
-                    #         logger.info(f"点击 'load-more-button' 失败: {e}")
-                except TimeoutException:
+                result = self.driver.execute_script("""
+                    let btn = document.querySelector('.load-more-button');
+                    if (btn) { btn.click(); return true; }
+                    return false;
+                """)
+                if not result:
+                    logger.info("没有找到加载更多按钮，跳出循环")
                     break
+                time.sleep(random.uniform(0.65, 4.5))  # 等待加载更多按钮点击后的加载时间
         except TimeoutException:
             pass
-        logger.info("开始获取")
+        except Exception as e:
+            logger.error(f"等待加载更多按钮时发生异常: {e}", exc_info=True)
+        screenshot_filename = f"/mnt/data/screenshots/{int(time.time())}.png"
+        logger.info(f"开始截图到 {screenshot_filename}")
+        self.driver.save_screenshot(screenshot_filename)
+        logger.info("获取页面性能日志")
         logs = self.driver.get_log("performance")
         detail_data, comment_data = self._filter_logs_v1(logs)
+        if not isinstance(detail_data, dict):
+            logger.error("未能正确获取题目详情数据")
+            return {"code": -2000, "message": "Failed to fetch problem details"}, []
+        detail_data["screenshot"] = screenshot_filename
         return detail_data, comment_data
 
     def crawl_page(self, url, retry=3):
@@ -178,9 +195,10 @@ class CoreCrawler:
                     cookies = self._ensure_valid_cookies()
 
                     # 设置 cookies 到浏览器
-                    if not self.set_cookies_to_browser(cookies["cookies"]):
-                        # self._handle_invalid_cookies(cookies["id"])
-                        continue
+                    if "cookies" in cookies and cookies["cookies"]:   # 确保 cookies 字段存在且非空
+                        if not self.set_cookies_to_browser(cookies["cookies"]):
+                            # self._handle_invalid_cookies(cookies["id"])
+                            continue
 
                     # 跳转目标页面
                     self.driver.get(url)
@@ -193,19 +211,25 @@ class CoreCrawler:
 
                     # 执行用户自定义的页面内容截取逻辑
                     detail, comment = self.fetch_page_content(url)
-                    if detail:
+                    if detail and 'code' in detail:
+                        if detail['code'] == -9999:
+                            raise Exception(f"WebDriverCrashProblem: {detail}")
                         if detail['code'] != 0 or 'data' not in detail:
                             logger.error(f"获取题目详情失败，返回内容: {detail}")
+                            if detail['code'] > 0:
+                                # 可能是链接错误导致，直接不继续判断
+                                return "wrong link", []
                             continue
                         return detail["data"], [i['data'] for i in comment if 'code' in i and i['code'] == 0]
 
                 except Exception as e:
                     logger.error(f"爬取过程中发生异常: {e}", exc_info=True)
                     self.webdriver_manager.restart_driver()
+                    self.driver = self.webdriver_manager.get_driver()
                     time.sleep(5)
 
         logger.error(f"爬取失败，已达最大重试次数: {retry}")
-        return None
+        return None, None
 
     def _is_redirected_to_login_page(self):
         """
