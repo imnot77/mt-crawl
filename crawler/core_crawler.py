@@ -166,7 +166,7 @@ class CoreCrawler:
             pass
         except Exception as e:
             logger.error(f"等待加载更多按钮时发生异常: {e}", exc_info=True)
-        screenshot_filename = f"screenshots/{int(time.time())}.png"
+        screenshot_filename = f"/mnt/data/screenshots/{int(time.time())}.png"
         logger.info(f"开始截图到 {screenshot_filename}")
         self.driver.save_screenshot(screenshot_filename)
         logger.info("获取页面性能日志")

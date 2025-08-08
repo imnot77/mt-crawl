@@ -57,7 +57,7 @@ def process_queue():
     while True:
         now = datetime.now()
         # Wait until the start of the next minute
-        sleep_seconds = 60 - now.second
+        sleep_seconds = (60 - now.second) % 30
         print(f"Waiting for {sleep_seconds} seconds until the next minute...")
         time.sleep(sleep_seconds)
 

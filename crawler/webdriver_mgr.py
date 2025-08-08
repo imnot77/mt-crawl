@@ -44,8 +44,10 @@ class WebDriverManager:
         """初始化或重新创建 WebDriver 实例"""
         for attempt in range(1, self.retry_limit + 1):
             try:
-                logger.info("正在启动 WebDriver...")
-                self.driver = uc.Chrome(service=Service(config.CHROME_DRIVER_PATH), options=self._default_options(), seleniumwire_options=self.wire_options)
+                logger.info(f"正在启动 WebDriver...{config.CHROME_DRIVER_PATH}")
+                self.driver = uc.Chrome(driver_executable_path=config.CHROME_DRIVER_PATH, options=self._default_options(), version_main=138, seleniumwire_options=self.wire_options)
+                print(self.driver.capabilities['browserVersion'])  # 输出 Chromium 版本
+                print(self.driver.capabilities['chrome']['chromedriverVersion'])  # 输出驱动版本
                 self.driver.execute_cdp_cmd("Network.enable", {})
                 self.driver.execute_cdp_cmd("Network.setBlockedURLs", {
                     "urls": ["*zqt.meituan.com/auth*", "*zqt.meituan.com/sso/web/auth?*"]
